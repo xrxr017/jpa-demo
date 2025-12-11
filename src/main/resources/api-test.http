@@ -1,0 +1,38 @@
+### 1. 创建用户 (POST)
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "username": "Jerry",
+  "email": "jerry@mouse.com",
+  "nickName": "LittleJerry",
+  "phone": "13900139000"
+}
+
+###
+
+# curl -v -X POST http://localhost:8080/api/users
+#     -H "Content-Type: application/json"
+#     -d '{"username": "MacUser", "email": "mac@apple.com", "nickName": "Steve", "phone": "13900000000"}'
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "username": "MacUser",
+  "email": "mac@apple.com",
+  "nickName": "Steve",
+  "phone": "13900000000"
+}
+
+###
+
+
+### (分隔符) 下面是下一个请求
+
+### 2. 查询用户 (GET) - 第一次查 (走数据库)
+GET http://localhost:8080/api/users/1
+Accept: application/json
+
+### 3. 查询用户 (GET) - 第二次查 (走 Redis 缓存)
+GET http://localhost:8080/api/users/1
+Accept: application/json

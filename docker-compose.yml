@@ -1,0 +1,111 @@
+# ==========================================
+# 🐳 Docker Compose - 多容器编排
+# ==========================================
+# docker-compose 用于定义和运行多容器应用
+# 一个命令就能启动所有服务！
+
+# version 已废弃，已移除
+
+services:
+  # -----------------------------------------
+  # PostgreSQL 数据库服务
+  # -----------------------------------------
+  postgres:
+    # 使用官方 PostgreSQL 镜像
+    image: postgres:15-alpine
+    # 容器名称
+    container_name: jpa-demo-postgres
+    # 环境变量配置
+    environment:
+      POSTGRES_DB: learn_jpa          # 数据库名
+      POSTGRES_USER: admin            # 用户名
+      POSTGRES_PASSWORD: password     # 密码
+    # 端口映射: 宿主机端口:容器端口
+    # 5433 被占用，改用 5434
+    ports:
+      - "5434:5432"
+    # 数据卷: 持久化数据库数据
+    # 即使容器删除，数据也会保留！
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # 健康检查
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d learn_jpa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # 网络
+    networks:
+      - jpa-network
+
+  # -----------------------------------------
+  # Redis 缓存服务
+  # -----------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: jpa-demo-redis
+    # 6379 被占用，改用 6380
+    ports:
+      - "6380:6379"
+    # Redis 数据持久化
+    volumes:
+      - redis_data:/data
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jpa-network
+
+  # -----------------------------------------
+  # Spring Boot 应用服务
+  # -----------------------------------------
+  app:
+    # 从当前目录的 Dockerfile 构建镜像
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jpa-demo-app
+    # 依赖其他服务（先启动数据库和Redis）
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # 环境变量（覆盖 application.properties）
+    environment:
+      # 在 Docker 网络中，使用服务名作为主机名
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/learn_jpa
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+    ports:
+      - "8081:8081"
+    networks:
+      - jpa-network
+    # 重启策略
+    restart: unless-stopped
+
+# -----------------------------------------
+# 数据卷定义
+# -----------------------------------------
+# Volume 是 Docker 管理的持久化存储
+# 容器删除后数据依然保留
+volumes:
+  postgres_data:
+    name: jpa-demo-postgres-data
+  redis_data:
+    name: jpa-demo-redis-data
+
+# -----------------------------------------
+# 网络定义
+# -----------------------------------------
+# 自定义网络让容器之间可以通过服务名通信
+networks:
+  jpa-network:
+    name: jpa-demo-network
+    driver: bridge
+
