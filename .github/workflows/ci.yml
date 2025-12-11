@@ -105,6 +105,11 @@ jobs:
     needs: build  # 依赖 build job 完成
     # 只在 main 分支的 push 事件触发（不在 PR 时构建镜像）
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    # 添加权限：允许写入 packages（推送镜像到 GHCR）
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       # 步骤1: 检出代码
