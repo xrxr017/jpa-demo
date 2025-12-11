@@ -33,6 +33,33 @@ jobs:
     name: 🔨 Build & Test
     runs-on: ubuntu-latest
 
+    # 添加 PostgreSQL 和 Redis 服务
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: learn_jpa
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5433:5432
+        # 健康检查，确保数据库就绪
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       # 步骤1: 检出代码
       - name: 📥 Checkout code
@@ -49,6 +76,13 @@ jobs:
       # 步骤3: 运行测试
       - name: 🧪 Run tests
         run: mvn test -B
+        env:
+          # 覆盖数据库连接配置（使用 127.0.0.1 连接到服务容器）
+          SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5433/learn_jpa
+          SPRING_DATASOURCE_USERNAME: admin
+          SPRING_DATASOURCE_PASSWORD: password
+          SPRING_DATA_REDIS_HOST: 127.0.0.1
+          SPRING_DATA_REDIS_PORT: 6379
 
       # 步骤4: 构建项目（跳过测试，因为上一步已经测试过了）
       - name: 📦 Build with Maven
@@ -114,4 +148,3 @@ jobs:
       # 步骤6: 输出镜像信息
       - name: 📝 Image digest
         run: echo "Image pushed with digest ${{ steps.meta.outputs.digest }}"
-
